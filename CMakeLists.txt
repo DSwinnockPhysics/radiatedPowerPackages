@@ -15,7 +15,7 @@ include_directories(${CMAKE_SOURCE_DIR} ${ROOT_INCLUDE_DIRS})
 add_definitions(${ROOT_CXX_FLAGS})
 
 # Locate Boost libraries
-find_package(Boost 1.73.0 REQUIRED ALL)
+find_package(Boost 1.73.0 REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 
 # Add the FFTW ROOT library
@@ -38,6 +38,10 @@ list(APPEND EXTRA_INCLUDES "${PROJECT_SOURCE_DIR}/SignalProcessing")
 add_subdirectory(Antennas)
 list(APPEND EXTRA_LIBS Antennas)
 list(APPEND EXTRA_INCLUDES "${PROJECT_SOURCE_DIR}/Antennas")
+
+add_subdirectory(SingleElectronRadiation)
+list(APPEND EXTRA_LIBS SingleElectronRadiation)
+list(APPEND EXTRA_INCLUDES "${PROJECT_SOURCE_DIR}/SingleElectronRadiation")
 
 add_subdirectory(ElectronDynamics)
 

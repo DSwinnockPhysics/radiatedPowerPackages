@@ -36,13 +36,16 @@ namespace rad
     /// \Returns a 3-vector of the acceleration from the RR force
     TVector3 radiation_acceleration(const TVector3 pos, const TVector3 vel);
 
-    /// Returns the B field at the position
-    TVector3 calc_b_field(const TVector3 pos);
+
     
   public:
     /// Default constructor
     /// By default a uniform field is used
     BorisSolver();
+	
+    /// Returns the B field at the position
+    TVector3 calc_b_field(const TVector3 pos);
+	
 		
     /// \param field_v Pointer to a magnetic field calculator
     /// \param charge_v Particle charge. Default is electron charge

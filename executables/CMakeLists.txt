@@ -34,3 +34,21 @@ target_link_libraries(crudeEnergyResolution PUBLIC ElectronDynamics SignalProces
 
 add_executable(harmonicTrapDetectability harmonicTrapDetectability.cxx)
 target_link_libraries(harmonicTrapDetectability PUBLIC Antennas SignalProcessing ElectronDynamics BasicFunctions ${ROOT_LIBRARIES})
+
+
+
+
+
+include_directories(/home/phrnxbhome/Code/C++/Libraries/Eigen3.4.0/eigen-3.4.0)
+add_library(BorisSolverSolve BorisSolverSolve.cxx)
+target_link_libraries(BorisSolverSolve PUBLIC ElectronDynamics SignalProcessing Antennas BasicFunctions SingleElectronRadiation ${ROOT_LIBRARIES})
+
+include_directories(/home/phrnxbhome/Code/C++/TBetaGenerator/TBetaGenerator-main/TBetaGenerator-main)
+add_executable(TestBackgroundElectrons TestBackgroundElectrons.cxx)
+target_link_libraries(TestBackgroundElectrons PUBLIC /home/phrnxbhome/Code/C++/ProbabilityDistTest/build/libCustomProbDist.so ElectronDynamics SignalProcessing Antennas BasicFunctions BorisSolverSolve SingleElectronRadiation ${ROOT_LIBRARIES})
+
+include_directories(/home/phrnxbhome/Code/C++/Libraries/BFieldModels/include)
+add_executable(SingleElectronSolve SingleElectronSolve.cxx)
+target_link_libraries(SingleElectronSolve PUBLIC /home/phrnxbhome/Code/C++/ProbabilityDistTest/build/libCustomProbDist.so ElectronDynamics SignalProcessing Antennas BasicFunctions BorisSolverSolve SingleElectronRadiation ${ROOT_LIBRARIES})
+
+
