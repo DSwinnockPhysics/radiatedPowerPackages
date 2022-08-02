@@ -104,17 +104,23 @@ int main(int argc, char *argv[]){
     int opt;
     std::string outputDir = " ";
     std::string outputFileName = " ";
+    bool makeTimes{ false };
     const option long_opts[] = {
     {"outputDir", required_argument, nullptr, 'd'},
-    {"outputFileName", required_argument, nullptr, 'f'}
+    {"outputFileName", required_argument, nullptr, 'f'},
+    {"makeTimes", optional_argument, nullptr, 't'}
     };
-    while((opt = getopt_long(argc, argv, ":d:f:n:r:l:kh", long_opts, nullptr)) != -1) {
+    while((opt = getopt_long(argc, argv, ":d:f:tn:r:l:kh", long_opts, nullptr)) != -1) {
         switch(opt) {
         case 'd':
                 outputDir = optarg;
                 break;
         case 'f':
                 outputFileName = optarg;
+                break;
+        case 't':
+                makeTimes = true;
+                std::cout << "t option used." << makeTimes << std::endl;
                 break;
         }
     }
@@ -155,11 +161,40 @@ int main(int argc, char *argv[]){
     std::cout << randomNumber << std::endl;
 
     int electronsInFrequencyRange{ 0 };
-    int numElectronsToSimulate{ 100 };
+    int numElectronsToSimulate{ 15 };
 
-    std::vector<std::vector<double>> backgroundTimeAndVoltage{};
-    std::vector<double> backgroundOutputTimes{};
-    std::vector<double> backgroundOutputVoltages{};
+    // Track the electrons and combine their signals on the antenna together
+    double maxTime{ 1e-10 }; // seconds
+    const double timeStep = 1e-12; // seconds
+    int skipStepsInOutput{ 5 }; 
+    const double tau = 2 * R_E / (3 * TMath::C());
+    CustomBorisSolver solver(harmonicField, -TMath::Qe(), eMass, tau);
+    
+    // Want to make times if variable makeTimes is true, then close it so it doesn't take up memory
+    // If this is added as a command line input with a default value of false, then I only need to set this to true for one of the commands and then leave the rest as false.
+    int numberOfTimePoints{ static_cast<int>( (maxTime/timeStep) / skipStepsInOutput ) };
+    std::cout << "Number of time points: " << numberOfTimePoints << std::endl;
+    
+    if (makeTimes==true) {
+        std::cout << "Making times:" << std::endl;
+        std::vector<double> backgroundOutputTimes(numberOfTimePoints, 0.0);
+        for (int i=0; i<numberOfTimePoints; ++i) {
+            backgroundOutputTimes[i] = timeStep*(i*skipStepsInOutput+1);
+        }
+        std::ofstream timesFile;
+        timesFile.open("Outputs/" + outputFileName + "_TIMES.txt");
+        for (int i=0; i<backgroundOutputTimes.size(); ++i) {
+            timesFile << std::setprecision(12) << backgroundOutputTimes[i] << std::endl; 
+        }  
+        timesFile.close();
+    }
+    
+    std::vector<double> backgroundOutputVoltages(numberOfTimePoints, 0.0);
+    //std::vector<std::vector<double>> backgroundTimeAndVoltage{};
+
+
+
+
 
 
     for ( int electronNumber=0; electronNumber < numElectronsToSimulate; ++electronNumber ) {
@@ -167,7 +202,7 @@ int main(int argc, char *argv[]){
             std::cout << "Progress: " << electronNumber << std::endl;
         }
         
-        double randomRadius = sqrt(randomGenerator->Uniform()) * 0.02;
+        double randomRadius = sqrt(randomGenerator->Uniform()) * 0.005;
         double randomAngle = randomGenerator->Uniform() * 2 * TMath::Pi(); 
         double randomXPos{ randomRadius * cos(randomAngle) };
         double randomYPos{ randomRadius * sin(randomAngle) };
@@ -204,24 +239,47 @@ int main(int argc, char *argv[]){
 
 
 
-            // Track the electrons and combine their signals on the antenna together
-            double maxTime{ 1e-6 }; // seconds
-            const double timeStep = 1e-12; // seconds
-            int skipStepsInOutput{ 5 }; 
-            const double tau = 2 * R_E / (3 * TMath::C());
-            BorisSolver solver(harmonicField, -TMath::Qe(), eMass, tau);
-            
-            if (electronNumber==0) {
+            bool ignoreFirstElectronCodeTemporarily{ true }; 
+
+            if ( (electronNumber==0) && (ignoreFirstElectronCodeTemporarily==false) ) {
+                
                 // For the first electron, just store its voltage in a std::vector and save the times as well
-                backgroundTimeAndVoltage = BorisSolverSolve::SolveBorisReturnVoltageAndTime(solver, maxTime, timeStep, randomPosition, randomlyOrientedVelocity, skipStepsInOutput, pitchAngle);
-                backgroundOutputTimes = backgroundTimeAndVoltage[0];
-                backgroundOutputVoltages = backgroundTimeAndVoltage[1];
+                //backgroundTimeAndVoltage = BorisSolverSolve::SolveBorisReturnVoltageAndTime(solver, maxTime, timeStep, randomPosition, randomlyOrientedVelocity, skipStepsInOutput, pitchAngle);
+                // backgroundOutputTimes = backgroundTimeAndVoltage[0];
+                //backgroundOutputVoltages = backgroundTimeAndVoltage[1];
+                backgroundOutputVoltages = BorisSolverSolve::SolveBorisReturnVoltageAndTime(solver, maxTime, timeStep, randomPosition, randomlyOrientedVelocity, skipStepsInOutput, pitchAngle)[1];
+                // Set the random uniform integer generator for the displacements for later electrons
+                
             }
             else{
                 // For subsequent electrons, add the voltages to get the total voltage
+                TVector3 trackingBoundaries{0.03, 0.03, 0.1}; // If the electron moves outside +- these values in the x, y, z directions it stops being tracked.
+/*
                 backgroundTimeAndVoltage = BorisSolverSolve::SolveBorisReturnVoltageAndTime(solver, maxTime, timeStep, randomPosition, randomlyOrientedVelocity, skipStepsInOutput, pitchAngle);
                 for (int i=0; i<backgroundOutputTimes.size(); ++i) {
                     backgroundOutputVoltages[i] += backgroundTimeAndVoltage[1][i];
+                }
+*/
+               
+                std::vector<double> currentBackgroundVoltage{ BorisSolverSolve::SolveBorisReturnVoltageAndTimeWithCulling(solver, maxTime, timeStep, randomPosition, randomlyOrientedVelocity, skipStepsInOutput, pitchAngle, trackingBoundaries)[1] };
+                
+                /*for (int i=0; i<backgroundTimeAndVoltage.size(); ++i) {
+                    backgroundOutputVoltages[i] += backgroundTimeAndVoltage[1][i];
+                }*/
+
+                // Displace electron randomly in time and add
+                //std::cout << "Electron finished tracking" << std::endl;
+                
+                //std::cout << "Made integer distribution" << std::endl;
+                std::uniform_int_distribution<int> uni(0,backgroundOutputVoltages.size());
+                int randomDisplacementIndexStart = uni(mt);
+                int r{ randomDisplacementIndexStart };
+                //std::cout << "Created random displacement index" << std::endl;
+                
+                while (  (r<backgroundOutputVoltages.size()) && ((r-randomDisplacementIndexStart)<currentBackgroundVoltage.size())  ) {
+                    //std::cout << r << ", " << backgroundOutputTimes.size() << ", " <<r-randomDisplacementIndexStart << ", " <<  backgroundTimeAndVoltage[1].size() << "\n";
+                    backgroundOutputVoltages[r] += currentBackgroundVoltage[r-randomDisplacementIndexStart];
+                    ++r;
                 }
             } 
 
@@ -232,11 +290,11 @@ int main(int argc, char *argv[]){
 
     }
     std::cout << "Total voltage: " << std::endl;
-    std::cout << "Time: " << backgroundOutputTimes[0] << std::endl;
+    /*std::cout << "Time: " << backgroundOutputTimes[0] << std::endl;
     std::cout << "Time: " << backgroundOutputTimes[1] << std::endl;
     std::cout << "Time: " << backgroundOutputTimes[2] << std::endl;
     std::cout << "Time: " << backgroundOutputTimes[3] << std::endl;
-    std::cout << "Time: " << backgroundOutputTimes[4] << std::endl;
+    std::cout << "Time: " << backgroundOutputTimes[4] << std::endl;*/
     std::cout << "Voltage: " << backgroundOutputVoltages[0] << std::endl;
     std::cout << "Voltage: " << backgroundOutputVoltages[1] << std::endl;
     std::cout << "Voltage: " << backgroundOutputVoltages[2] << std::endl;
@@ -244,16 +302,16 @@ int main(int argc, char *argv[]){
     std::cout << "Voltage: " << backgroundOutputVoltages[4] << std::endl;
     
     std::ofstream backgroundVoltageFile;
-    backgroundVoltageFile.open("Outputs/" + outputFileName + ".txt");
+    backgroundVoltageFile.open("Outputs/" + outputFileName + "_VOLTAGES.txt");
     double RMSBackgroundVoltage{ 0 };
-    for (int i=0; i<backgroundOutputTimes.size(); ++i) {
-        backgroundOutputVoltages[i] += backgroundTimeAndVoltage[1][i];
-        backgroundVoltageFile << std::setprecision(12) << backgroundOutputTimes[i] << "," << backgroundOutputVoltages[i] << std::endl; 
-        RMSBackgroundVoltage += pow(backgroundOutputTimes[i],2);
+    for (int i=0; i<backgroundOutputVoltages.size(); ++i) {
+        //backgroundOutputVoltages[i] += backgroundTimeAndVoltage[1][i];
+        backgroundVoltageFile << std::setprecision(12) << backgroundOutputVoltages[i] << std::endl; 
+        RMSBackgroundVoltage += pow(backgroundOutputVoltages[i],2);
     }  
     backgroundVoltageFile.close();
 
-    RMSBackgroundVoltage /= backgroundOutputTimes.size();
+    RMSBackgroundVoltage /= backgroundOutputVoltages.size();
     RMSBackgroundVoltage = pow(RMSBackgroundVoltage, 0.5);
 
     std::cout << std::scientific;

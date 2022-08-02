@@ -136,7 +136,6 @@ void BorisSolverSolve::SolveBoris(BorisSolver solver, double maxTime, double tim
 
 
 
-
 // Note the antenna properties here are separate from the one above, this could be an issue at some point
 std::vector<std::vector<double>> BorisSolverSolve::SolveBorisReturnVoltageAndTime(BorisSolver solver, double maxTime, double timeStep, TVector3 x0, TVector3 v0, int skipStepsInOutput, double pitchAngle){
       std::vector<std::vector<double>> timeAndVoltage{};
@@ -321,6 +320,109 @@ std::vector<std::vector<double>> BorisSolverSolve::SolveBorisReturnVoltageAndTim
 }
 
 
+
+std::vector<std::vector<double>> BorisSolverSolve::SolveBorisReturnVoltageAndTimeWithCulling(CustomBorisSolver solver, double maxTime, double timeStep, TVector3 x0, TVector3 v0, int skipStepsInOutput, double pitchAngle, TVector3 cullVector){
+      std::vector<std::vector<double>> timeAndVoltage{};
+      std::vector<double> outputTimes{};
+      std::vector<double> outputVoltages{};   
+
+      //std::cout << "Starting solver:" << std::endl;
+      TVector3 posVec{x0};
+      TVector3 velVec{v0};
+      TVector3 accVec;
+
+      double xPos;
+      double yPos;
+      double zPos;
+      double xVel;
+      double yVel;
+      double zVel;
+      double time;
+      double xAcc;
+      double yAcc;
+      double zAcc;
+
+      bool isTrapped;
+      int isTrapped_val;
+      int nRecordedSteps{0};
+
+      unsigned int precision = 13;
+      std::cout << std::fixed;
+
+      int nTimeSteps = maxTime / timeStep;
+      for (int iStep = 0; iStep < nTimeSteps; iStep++) {
+            std::tuple<TVector3, TVector3> outputStep = solver.custom_advance_step(timeStep, posVec, velVec);
+            posVec = std::get<0>(outputStep);
+            velVec = std::get<1>(outputStep);
+            accVec = solver.acc(posVec, velVec);
+
+            time = double(iStep+1) * timeStep;
+            if (std::fmod(time, 5e-6) < timeStep) std::cout<<time<<" seconds generated"<<std::endl; 
+            
+            xPos = posVec.X();
+            yPos = posVec.Y();
+            zPos = posVec.Z();
+            xVel = velVec.X();
+            yVel = velVec.Y();
+            zVel = velVec.Z();
+            xAcc = accVec.X();
+            yAcc = accVec.Y();
+            zAcc = accVec.Z(); 
+
+            // Stop tracking the electron if it leaves the specified bounds
+            if ((xPos < -cullVector[0]) || (xPos > cullVector[0])) {
+                  std::cout << "Electron culled at position: " << xPos << ", " << yPos << ", " << zPos << std::endl;
+                  break;
+            }
+            if ((yPos < -cullVector[1]) || (yPos > cullVector[1])) {
+                  std::cout << "Electron culled at position: " << xPos << ", " << yPos << ", " << zPos << std::endl;
+                  break;
+            }
+            if ((zPos < -cullVector[2]) || (zPos > cullVector[2])) {
+                  std::cout << "Electron culled at position: " << xPos << ", " << yPos << ", " << zPos << std::endl;
+                  break;
+            }
+
+            
+            // Save the result after some steps have been skipped - means you can get better accuracy on the trajectory but still lower size
+            if (iStep % skipStepsInOutput == 0) {
+
+                  double RVel = sqrt( velVec.X()*velVec.X() + velVec.Y()*velVec.Y() );
+
+                  // double thisPitchAngle = abs( atan(RVel / velVec.Z()) );
+                  // if (thisPitchAngle < pitchAngle) pitchAngle = thisPitchAngle;
+
+                  Eigen::Vector3d antennaPosition( 0.02, 0, 0 );
+                  Eigen::Vector3d antennaAlignment( 0, 1, 0 );
+
+                  TVector3 currentField( solver.calc_b_field(posVec) );
+                  double B = currentField.Mag();
+                  double gamma = pow( 1-velVec.Mag2()/(c*c), 0.5 );
+                  double initialKEJ = (gamma-1) * eMass * c * c;
+                  double frequency( CalculateFrequency(initialKEJ, B) );
+                  double wavelength( 299792458 / frequency);
+
+                  Eigen::Vector3d EPosition(xPos, yPos, zPos);
+                  Eigen::Vector3d EVelocity(xVel, yVel, zVel);
+                  Eigen::Vector3d EAcceleration(xAcc, yAcc, zAcc);
+
+                  Eigen::Vector3d EField = RelFarEField(antennaPosition, EPosition, EVelocity, EAcceleration)  + RelNearEField(antennaPosition, EPosition, EVelocity, EAcceleration);
+                  Eigen::Vector3d vectorEffectiveLength = antennaAlignment * HalfWaveDipoleEffectiveLength(wavelength);
+                  
+                  double signalVoltage = vectorEffectiveLength.dot(EField);
+
+
+                  outputTimes.push_back(time);
+                  outputVoltages.push_back(signalVoltage);
+            }
+            nRecordedSteps++;
+      }
+
+      std::cout << std::scientific; // return the output type to scientific 
+      timeAndVoltage.push_back(outputTimes);
+      timeAndVoltage.push_back(outputVoltages);
+      return timeAndVoltage;
+}
 
 
 

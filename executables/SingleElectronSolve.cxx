@@ -50,7 +50,7 @@ int main(int argc, char *argv[]){
     TVector3 velVec(vDirection * initialSpeed);
 
     // Track the electrons and somehow combine their signals on the antenna together
-    double maxTime{ 1e-6 };
+    double maxTime{ 1e-10 };
     const double timeStep = 1e-12; 
     int skipStepsInOutput{ 5 };           
     
