@@ -7,6 +7,8 @@
 
 #include "TVector3.h"
 #include "TMath.h"
+#include "TSpline.h"
+#include "TGraph.h"
 
 #include <boost/math/special_functions/ellint_1.hpp>
 #include <boost/math/special_functions/ellint_2.hpp>
@@ -155,5 +157,65 @@ rad::HarmonicField::HarmonicField(const double radius, const double current, con
 TVector3 rad::HarmonicField::evaluate_field_at_point(const TVector3 vec)
 {
   TVector3 totalField = coil.evaluate_field_at_point(vec) + btBkg;
+  return totalField;
+}
+
+rad::HTSMagnetUCL::HTSMagnetUCL()
+{
+  // Create the graphs and splines
+  grFieldZ = new TGraph();
+  grFieldZ->SetPoint(grFieldZ->GetN(), -0.1, 0.865);
+  grFieldZ->SetPoint(grFieldZ->GetN(), -0.074, 1.0);
+  grFieldZ->SetPoint(grFieldZ->GetN(), -0.03, 1.04057);
+  grFieldZ->SetPoint(grFieldZ->GetN(), -0.025, 1.04069);
+  grFieldZ->SetPoint(grFieldZ->GetN(), -0.02, 1.04073);
+  grFieldZ->SetPoint(grFieldZ->GetN(), -0.01, 1.04075);
+  grFieldZ->SetPoint(grFieldZ->GetN(), 0.0, 1.04075);
+  grFieldZ->SetPoint(grFieldZ->GetN(), 0.01, 1.04075);
+  grFieldZ->SetPoint(grFieldZ->GetN(), 0.02, 1.04073);
+  grFieldZ->SetPoint(grFieldZ->GetN(), 0.025, 1.04069);
+  grFieldZ->SetPoint(grFieldZ->GetN(), 0.03, 1.04057);
+  grFieldZ->SetPoint(grFieldZ->GetN(), 0.074, 1.0);
+  grFieldZ->SetPoint(grFieldZ->GetN(), 0.1, 0.865);
+  spFieldZ = new TSpline3("", grFieldZ);
+
+  grFieldR = new TGraph();
+  grFieldR->SetPoint(grFieldR->GetN(), 0.000, 1.04075);
+  grFieldR->SetPoint(grFieldR->GetN(), 0.005, 1.04075);
+  grFieldR->SetPoint(grFieldR->GetN(), 0.010, 1.04075);
+  grFieldR->SetPoint(grFieldR->GetN(), 0.015, 1.04075);
+  grFieldR->SetPoint(grFieldR->GetN(), 0.020, 1.040751);
+  grFieldR->SetPoint(grFieldR->GetN(), 0.027, 1.04076);
+  grFieldR->SetPoint(grFieldR->GetN(), 0.030, 1.04077);
+  grFieldR->SetPoint(grFieldR->GetN(), 0.040, 1.040835);
+  spFieldR = new TSpline3("", grFieldR);  
+}
+
+rad::HTSMagnetUCL::~HTSMagnetUCL()
+{
+  delete grFieldZ;
+  delete spFieldZ;
+  delete grFieldR;
+  delete spFieldR;
+}
+
+TVector3 rad::HTSMagnetUCL::evaluate_field_at_point(const TVector3 vec)
+{
+  double R = sqrt(vec.X()*vec.X() + vec.Y()*vec.Y());
+  double scale = spFieldR->Eval(R) / spFieldR->Eval(0.0);
+  double fieldZ = spFieldZ->Eval(vec.Z()) * scale;
+  return TVector3(0.0, 0.0, fieldZ);
+}
+
+rad::HTSMagnetTrap::HTSMagnetTrap(double radius, double current)
+{
+  coil = CoilField(radius, current, 0.0, MU0);
+}
+
+TVector3 rad::HTSMagnetTrap::evaluate_field_at_point(const TVector3 vec)
+{
+  TVector3 coilField = coil.evaluate_field_at_point(vec);
+  TVector3 bkgField  = bkg.evaluate_field_at_point(vec);
+  TVector3 totalField = bkgField - coilField;
   return totalField;
 }

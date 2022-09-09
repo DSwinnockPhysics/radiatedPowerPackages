@@ -61,7 +61,8 @@ rad::Signal::Signal(std::vector<FieldPoint> fp, LocalOscillator lo, double srate
     std::cout<<"Performing the downmixing..."<<std::endl;
     TGraph* grVITimeUnfiltered = DownmixInPhase(grInputVoltageTemp, lo);
     TGraph* grVQTimeUnfiltered = DownmixQuadrature(grInputVoltageTemp, lo);
-
+    delete grInputVoltageTemp;
+    
     std::cout<<"First downsampling..."<<std::endl;
     TGraph* grVITimeFirstSample = SampleWaveform(grVITimeUnfiltered, 10*sampleRate);
     TGraph* grVQTimeFirstSample = SampleWaveform(grVQTimeUnfiltered, 10*sampleRate);
@@ -146,7 +147,8 @@ rad::Signal::Signal(FieldPoint fp, LocalOscillator lo, double srate,
   std::cout<<"Performing the downmixing..."<<std::endl;
   TGraph* grVITimeUnfiltered = DownmixInPhase(grInputVoltageTemp, lo);
   TGraph* grVQTimeUnfiltered = DownmixQuadrature(grInputVoltageTemp, lo);
-
+  delete grInputVoltageTemp;
+  
   std::cout<<"First downsampling..."<<std::endl;
   TGraph* grVITimeFirstSample = SampleWaveform(grVITimeUnfiltered, 10*sampleRate);
   TGraph* grVQTimeFirstSample = SampleWaveform(grVQTimeUnfiltered, 10*sampleRate);
@@ -190,6 +192,7 @@ void rad::Signal::ProcessTimeChunk(InducedVoltage iv, LocalOscillator lo,
   std::cout<<"Performing the downmixing..."<<std::endl;
   TGraph* grVITimeUnfiltered = DownmixInPhase(grInputVoltageTemp, lo);
   TGraph* grVQTimeUnfiltered = DownmixQuadrature(grInputVoltageTemp, lo);
+  delete grInputVoltageTemp;
   
   std::cout<<"First downsampling"<<std::endl;
   TGraph* grVITimeFirstSample = SampleWaveform(grVITimeUnfiltered, 10*sampleRate, firstSample10Time);
@@ -301,9 +304,11 @@ rad::Signal::Signal(InducedVoltage iv, LocalOscillator lo, double srate,
     if (thisChunk > maxTime) thisChunk = maxTime;
   }
 
-  std::cout<<"Adding noise..."<<std::endl;
-  AddGaussianNoise(grVITime, noiseTerms);
-  AddGaussianNoise(grVQTime, noiseTerms);  
+  if (noiseTerms.size() > 0) {
+    std::cout<<"Adding noise..."<<std::endl;
+    AddGaussianNoise(grVITime, noiseTerms);
+    AddGaussianNoise(grVQTime, noiseTerms);
+  }
 }
 
 rad::Signal::Signal(std::vector<InducedVoltage> iv, LocalOscillator lo, double srate,
@@ -349,9 +354,11 @@ rad::Signal::Signal(std::vector<InducedVoltage> iv, LocalOscillator lo, double s
     }    
   } // Loop over InducedVoltage vector
 
-  std::cout<<"Adding noise..."<<std::endl;
-  AddGaussianNoise(grVITime, noiseTerms);
-  AddGaussianNoise(grVQTime, noiseTerms);  
+  if (noiseTerms.size() > 0) {
+    std::cout<<"Adding noise..."<<std::endl;
+    AddGaussianNoise(grVITime, noiseTerms);
+    AddGaussianNoise(grVQTime, noiseTerms);
+  }
 }
 
 rad::Signal::Signal(const Signal &s1) {

@@ -87,6 +87,22 @@ double rad::CalcTimeFromRetardedTime(TVector3 fieldPoint, TVector3 ePosition, do
   return time;
 }
 
+double rad::GetSpeedFromKE(double T, double particleMass)
+{
+  double gamma = T*TMath::Qe() / (ME*TMath::C()*TMath::C()) + 1;
+  double betaSq = 1 - 1 / pow(gamma, 2);
+  double speed = sqrt(betaSq)*TMath::C();
+  return speed;
+}
+
+double rad::GetGyroradius(TVector3 velocity, TVector3 bField, double particleMass)
+{
+  double gamma{ 1 / sqrt( 1 - velocity.Dot(velocity)/(TMath::C()*TMath::C()) ) };
+  TVector3 vPerp{ velocity - (velocity.Dot(bField.Unit())*bField) };
+  double rg{ gamma*particleMass*vPerp.Mag() / (TMath::Qe()*bField.Mag()) };
+  return rg;
+}
+
 // Very similar to the FFTtools implementation but without the scaling of the x axis the MHz
 TGraph* rad::MakePowerSpectrumNorm(const TGraph* grWave)
 {

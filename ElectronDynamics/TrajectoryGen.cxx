@@ -112,6 +112,8 @@ void rad::ElectronTrajectoryGen::GenerateTraj()
 
     tree->Fill();
   }
+  fout->cd();
+  tree->Write();
   
   delete tree;
   fout->Close();

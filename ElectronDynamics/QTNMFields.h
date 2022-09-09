@@ -13,6 +13,8 @@
 #include "BasicFunctions/Constants.h"
 
 #include "TVector3.h"
+#include "TSpline.h"
+#include "TGraph.h"
 
 namespace rad
 {
@@ -178,6 +180,39 @@ namespace rad
     TVector3 evaluate_field_at_point(const TVector3 vec);
   };
 
+
+  /// Class describing the custom HTS magnet designed for the UCL AMOPP group
+  class HTSMagnetUCL : public BaseField {
+  private:
+    TGraph* grFieldZ;
+    TGraph* grFieldR;
+    
+    TSpline3* spFieldZ;
+    TSpline3* spFieldR;
+    
+  public:
+    /// Default constructor
+    HTSMagnetUCL();
+
+    /// Default destructor
+    ~HTSMagnetUCL();
+
+    /// Calculates the magnetic field at a point
+    /// \param vec The position vector (in metres)
+    /// \Returns The magnetic field vector at the point (in Tesla)
+    TVector3 evaluate_field_at_point(const TVector3 vec);    
+  };
+
+  class HTSMagnetTrap : public BaseField {
+  private:
+    CoilField coil;
+    HTSMagnetUCL bkg;
+
+  public:
+    HTSMagnetTrap(double radius, double current);
+
+    TVector3 evaluate_field_at_point(const TVector3 vec);    
+  };
 }
 
 #endif
