@@ -161,10 +161,10 @@ int main(int argc, char *argv[]){
     std::cout << randomNumber << std::endl;
 
     int electronsInFrequencyRange{ 0 };
-    int numElectronsToSimulate{ 15 };
+    int numElectronsToSimulate{ 141 };
 
     // Track the electrons and combine their signals on the antenna together
-    double maxTime{ 1e-10 }; // seconds
+    double maxTime{ 1e-4 }; // seconds
     const double timeStep = 1e-12; // seconds
     int skipStepsInOutput{ 5 }; 
     const double tau = 2 * R_E / (3 * TMath::C());

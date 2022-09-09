@@ -21,10 +21,7 @@ namespace rad
   class BorisSolver {
     
   private:
-    double mass;
-    double charge;
-    double tau;
-    BaseField* field=0;
+
 
     /// Calculate omega as a function of position
     /// \param pos Position of charge
@@ -39,6 +36,11 @@ namespace rad
 
     
   public:
+    double mass;
+    double charge;
+    double tau;
+    BaseField* field=0;
+
     /// Default constructor
     /// By default a uniform field is used
     BorisSolver();
